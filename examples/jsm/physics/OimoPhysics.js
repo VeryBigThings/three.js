@@ -1,10 +1,22 @@
-import { Vec3, World, RigidBodyType, RigidBodyConfig, ShapeConfig, RigidBody, Shape, OBoxGeometry, OSphereGeometry } from '../libs/OimoPhysics/index.js';
+import { Vec3, World, RigidBodyType, RigidBodyConfig, ShapeConfig, RigidBody, Shape, OBoxGeometry, OSphereGeometry, DebugDraw } from '../libs/OimoPhysics/index.js';
 
-async function OimoPhysics() {
+/**
+ * OimoPhysics helper constructor
+ * @param {boolean} enableDebug If true, debug will be added to the World and returned
+ * @return {Promise<{addMesh: addMesh, setMeshPosition: setMeshPosition, debugDraw?: DebugDraw}>}
+ * @constructor
+ */
+async function OimoPhysics(enableDebug) {
 
 	const frameRate = 60;
 
 	const world = new World( 2, new Vec3( 0, - 9.8, 0 ) );
+	let oimoDebugger;
+
+	if(!!enableDebug) {
+		oimoDebugger = OimoPhysicsDebugger();
+		world.setDebugDraw(oimoDebugger.de);
+	}
 
 	//
 
@@ -192,7 +204,8 @@ async function OimoPhysics() {
 
 	return {
 		addMesh: addMesh,
-		setMeshPosition: setMeshPosition
+		setMeshPosition: setMeshPosition,
+		debugDraw: debugDraw
 		// addCompoundMesh
 	};
 
@@ -227,5 +240,7 @@ function compose( position, quaternion, array, index ) {
 	array[ index + 15 ] = 1;
 
 }
+
+
 
 export { OimoPhysics };

@@ -41,3 +41,6 @@ export const OGeometry = oimo.collision.geometry.Geometry;
 
 // callback
 export const RayCastClosest = oimo.dynamics.callback.RayCastClosest;
+
+// debudraw
+export const DebugDraw = oimo.dynamics.common.DebugDraw;
