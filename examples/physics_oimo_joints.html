@@ -20,25 +20,36 @@
 			import { OimoPhysics } from './jsm/physics/OimoPhysics.js';
 			import Stats from './jsm/libs/stats.module.js';
 
-			let camera, scene, renderer, stats;
-			let physics, position;
+			import {
+				TranslationalLimitMotor,
+				SpringDamper,
+				Vec3,
+				RotationalLimitMotor,
+				RigidBodyType, MathUtil
+			} from './jsm/libs/OimoPhysics';
+			import { OimoMousePuller } from './jsm/physics/OimoMousePuller.js';
 
-			let boxes, spheres;
+			let camera, scene, renderer, stats;
+			let physics;
 
 			init();
 
 			async function init() {
 
-				physics = await OimoPhysics();
-				position = new THREE.Vector3();
+				physics = await OimoPhysics( true );
 
 				//
 
 				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 100 );
-				camera.position.set( - 1, 1.5, 2 );
-				camera.lookAt( 0, 0.5, 0 );
+				camera.position.set( - 7.36, 10.2, 10.86 );
+				camera.lookAt( 0, 1.5, 0 );
 
 				scene = new THREE.Scene();
+				console.log( 'physics', physics );
+				scene.add( physics.debugDraw.lines );
+				scene.add( physics.debugDraw.triangles );
+				physics.world.getDebugDraw().drawJointLimits = true;
+				physics.world.getDebugDraw().drawShapes = false;
 				scene.background = new THREE.Color( 0x666666 );
 
 				const hemiLight = new THREE.HemisphereLight();
@@ -52,58 +63,206 @@
 				scene.add( dirLight );
 
 				const floor = new THREE.Mesh(
-					new THREE.BoxGeometry( 10, 5, 10 ),
-					new THREE.ShadowMaterial( { color: 0x111111 } )
+					new THREE.BoxGeometry( 10, 0.2, 10 ),
+					// new THREE.ShadowMaterial( { color: 0x111111 } )
+					new THREE.MeshStandardMaterial( { color: 0x111111 } )
 				);
-				floor.position.y = - 2.5;
+				floor.position.y = - 0.2;
 				floor.receiveShadow = true;
 				scene.add( floor );
 				physics.addMesh( floor );
 
-				//
 
-				const material = new THREE.MeshLambertMaterial();
+				createBallChain( new Vec3( - 2, 5, - 2 ), 0.4, 7 );
+				createHingeChain( new Vec3( 2, 5, - 2 ), 0.3, 7, new Vec3( 0, 0, 1 ) );
 
-				const matrix = new THREE.Matrix4();
-				const color = new THREE.Color();
+				createBoard( 0, 2, 0, new RotationalLimitMotor().setLimits( - 45 * MathUtil.TO_RADIANS, 45 * MathUtil.TO_RADIANS ), new SpringDamper() );
+				createBoard( 0, 4, 0, new RotationalLimitMotor().setLimits( - 45 * MathUtil.TO_RADIANS, 45 * MathUtil.TO_RADIANS ), new SpringDamper().setSpring( 2, 0.3 ) );
+				createBoard( 0, 6, 0, new RotationalLimitMotor().setMotor( MathUtil.TWO_PI, MathUtil.TWO_PI * 4 ), new SpringDamper() );
 
-				// Boxes
 
-				const geometryBox = new THREE.BoxGeometry( 0.1, 0.1, 0.1 );
-				boxes = new THREE.InstancedMesh( geometryBox, material, 100 );
-				boxes.instanceMatrix.setUsage( THREE.DynamicDrawUsage ); // will be updated every frame
-				boxes.castShadow = true;
-				boxes.receiveShadow = true;
-				scene.add( boxes );
+				{
 
-				for ( let i = 0; i < boxes.count; i ++ ) {
+					const x = 2;
+					const y = 5;
+					const z = 1;
 
-					matrix.setPosition( Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5 );
-					boxes.setMatrixAt( i, matrix );
-					boxes.setColorAt( i, color.setHex( 0xffffff * Math.random() ) );
+					const sphere = new THREE.Mesh( new THREE.SphereGeometry( 0.1 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					sphere.position.set( x, y, z );
+					scene.add( sphere );
+					const physSphere = physics.addMesh( sphere, 0 );
 
-				}
+					const box = new THREE.Mesh( new THREE.BoxGeometry( 0.3, 0.5, 0.5 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box.position.set( x, y, z );
+					scene.add( box );
+					const physBox = physics.addMesh( box, 1 );
 
-				physics.addMesh( boxes, 1 );
-
-				// Spheres
-
-				const geometrySphere = new THREE.IcosahedronGeometry( 0.075, 3 );
-				spheres = new THREE.InstancedMesh( geometrySphere, material, 100 );
-				spheres.instanceMatrix.setUsage( THREE.DynamicDrawUsage ); // will be updated every frame
-				spheres.castShadow = true;
-				spheres.receiveShadow = true;
-				scene.add( spheres );
-
-				for ( let i = 0; i < spheres.count; i ++ ) {
-
-					matrix.setPosition( Math.random() - 0.5, Math.random() * 2, Math.random() - 0.5 );
-					spheres.setMatrixAt( i, matrix );
-					spheres.setColorAt( i, color.setHex( 0xffffff * Math.random() ) );
+					physics.addPrismaticJoint( physSphere, physBox, new Vec3( x, y, z ), new Vec3( 1, 1, 0 ), new SpringDamper(), new TranslationalLimitMotor().setLimits( - 1, 1 ) );
 
 				}
 
-				physics.addMesh( spheres, 1 );
+				{
+
+					const x = - 2;
+					const y = 5;
+					const z = 1;
+
+					const sphere = new THREE.Mesh( new THREE.SphereGeometry( 0.1 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					sphere.position.set( x, y, z );
+					scene.add( sphere );
+					const physSphere = physics.addMesh( sphere, 0 );
+
+					const box = new THREE.Mesh( new THREE.BoxGeometry( 0.3, 0.5, 0.5 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box.position.set( x - 0.31, y, z );
+					scene.add( box );
+					const physBox = physics.addMesh( box, 1 );
+
+					physics.addCylindricalJoint( physSphere, physBox, new Vec3( x, y, z ), new Vec3( 1, 0, 0 ), new SpringDamper(), new RotationalLimitMotor().setLimits( - 2, 2 ), new SpringDamper().setSpring( 4, 0.7 ), new TranslationalLimitMotor().setLimits( - 1, 1 ) );
+
+				}
+
+				{
+
+					const x = - 2;
+					const y = 3;
+					const z = 3;
+					const length = 1.0;
+
+					const box1 = new THREE.Mesh( new THREE.BoxGeometry( 0.2, 0.5, 0.2 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box1.position.set( x, y + length, z );
+					scene.add( box1 );
+					const physBox1 = physics.addMesh( box1, 1 );
+					physBox1.setType( RigidBodyType.KINEMATIC );
+					physBox1.setAngularVelocity( new Vec3( 0, 1.5, 0 ) );
+
+
+					const box2 = new THREE.Mesh( new THREE.BoxGeometry( 0.2, 0.5, 0.2 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box2.position.set( x, y - length, z );
+					scene.add( box2 );
+					const physBox2 = physics.addMesh( box2, 1 );
+
+					physics.addRagdollJoint( physBox1, physBox2, new Vec3( x, y, z ), new Vec3( 0, 1, 0 ), new Vec3( 0, 0, 1 ), new SpringDamper(), 40, 80, new SpringDamper(), new RotationalLimitMotor().setLimits( - MathUtil.HALF_PI, MathUtil.HALF_PI ) );
+
+				}
+
+				{
+
+					const x = 2;
+					const y = 3;
+					const z = 3;
+					const length = 1.0;
+					const hingeLimit1 = new RotationalLimitMotor().setLimits( - MathUtil.HALF_PI * 0.5, MathUtil.HALF_PI * 0.5 );
+					const hingeLimit2 = new RotationalLimitMotor().setLimits( - MathUtil.HALF_PI * 0.8, MathUtil.HALF_PI * 0.8 );
+
+					const box1 = new THREE.Mesh( new THREE.BoxGeometry( 0.2, 0.5, 0.2 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box1.position.set( x, y + length, z );
+					scene.add( box1 );
+					const physBox1 = physics.addMesh( box1, 1 );
+					physBox1.setType( RigidBodyType.KINEMATIC );
+					physBox1.setAngularVelocity( new Vec3( 0, 1.5, 0 ) );
+
+					const box2 = new THREE.Mesh( new THREE.BoxGeometry( 0.2, 0.5, 0.2 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box2.position.set( x, y - length, z );
+					scene.add( box2 );
+					const physBox2 = physics.addMesh( box2, 1 );
+
+					physics.addUniversalJoint( physBox1, physBox2, new Vec3( x, y, z ), new Vec3( 1, 0, 0 ), new Vec3( 0, 0, 1 ), new SpringDamper(), hingeLimit1, new SpringDamper(), hingeLimit2 );
+
+				}
+
+
+				function createBallChain( from, radius, num ) {
+
+					const sphere = new THREE.Mesh( new THREE.SphereGeometry( radius * 0.9 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					sphere.position.copy( from );
+					scene.add( sphere );
+
+					let b1 = physics.addMesh( sphere, 0 );
+					let b2;
+
+					const localAnchor1 = new Vec3( 0, 0, 0 );
+					const localAnchor2 = new Vec3( 0, - radius * 2, 0 );
+
+					for ( let i = 0; i < num; i ++ ) {
+
+						if ( i === num - 1 ) {
+
+							from.x += MathUtil.randIn( - 0.001, 0.001 );
+							from.z += MathUtil.randIn( - 0.001, 0.001 );
+
+						}
+
+						from.y += radius * 2;
+
+						const sphere = new THREE.Mesh( new THREE.SphereGeometry( radius * 0.9 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+						sphere.position.copy( from );
+						scene.add( sphere );
+						b2 = physics.addMesh( sphere, 1 );
+
+						physics.addSphericalJoint2( b1, b2, localAnchor1, localAnchor2 );
+
+						b1 = b2;
+						localAnchor1.init( 0, radius, 0 );
+						localAnchor2.init( 0, - radius, 0 );
+
+					}
+
+				}
+
+				function createHingeChain( from, radius, num, axis ) {
+
+					const box = new THREE.Mesh( new THREE.BoxGeometry( radius * 2, radius * 2, radius * 2 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box.position.copy( from );
+					scene.add( box );
+
+					let b1 = physics.addMesh( box, 0 );
+					let b2;
+
+					const localAnchor1 = new Vec3( 0, 0, 0 );
+					const localAnchor2 = new Vec3( 0, - radius * 2, 0 );
+
+					for ( let i = 0; i < num; i ++ ) {
+
+						if ( i === num - 1 ) {
+
+							from.x += MathUtil.randIn( - 0.001, 0.001 );
+							from.z += MathUtil.randIn( - 0.001, 0.001 );
+
+						}
+
+						from.y += radius * 2;
+
+						const box = new THREE.Mesh( new THREE.BoxGeometry( radius * 0.5 * 2, radius * 0.9 * 2, radius * 0.9 * 2 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+						box.position.copy( from );
+						scene.add( box );
+						b2 = physics.addMesh( box, 1 );
+
+
+						physics.addRevoluteJoint2( b1, b2, localAnchor1, localAnchor2, axis, axis );
+
+						b1 = b2;
+						localAnchor1.init( 0, radius, 0 );
+						localAnchor2.init( 0, - radius, 0 );
+
+					}
+
+				}
+
+				function createBoard( x, y, z, lm, sd ) {
+
+					const box1 = new THREE.Mesh( new THREE.BoxGeometry( 0.1, 0.1, 0.1 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box1.position.set( x, y, z );
+					scene.add( box1 );
+					const physBox1 = physics.addMesh( box1, 0 );
+
+					const box2 = new THREE.Mesh( new THREE.BoxGeometry( 0.5, 0.2, 0.4 ), new THREE.MeshStandardMaterial( { color: 0xffffff * Math.random() } ) );
+					box2.position.set( x + 0.5, y, z );
+					scene.add( box2 );
+					const physBox2 = physics.addMesh( box2, 1 );
+
+					physics.addRevoluteJoint( physBox1, physBox2, new Vec3( x, y, z ), new Vec3( 0, 0, 1 ), sd, lm );
+
+				}
 
 				//
 
@@ -123,7 +282,15 @@
 				controls.target.y = 0.5;
 				controls.update();
 
+				new OimoMousePuller( physics.world, renderer, controls, scene );
+
 				animate();
+
+				// function createBoard(x, y, z, lm, sd) {
+				// 	const {physics: b1} = OimoPhysics.addMesh(new Vec3(x, y, z), new Vec3(0.1, 0.1, 0.1), true);
+				// 	const {physics: b2} = this.addBox(this.world, new Vec3(x + 0.5, y, z), new Vec3(0.5, 0.2, 0.4), false);
+				// 	OimoUtil.addRevoluteJoint(this.world, b1, b2, new Vec3(x, y, z), new Vec3(0, 0, 1), sd, lm);
+				// }
 
 			}
 
@@ -133,17 +300,17 @@
 
 				//
 
-				let index = Math.floor( Math.random() * boxes.count );
-
-				position.set( 0, Math.random() + 1, 0 );
-				physics.setMeshPosition( boxes, position, index );
+				// let index = Math.floor( Math.random() * boxes.count );
+				//
+				// position.set( 0, Math.random() + 1, 0 );
+				// physics.setMeshPosition( boxes, position, index );
 
 				//
 
-				index = Math.floor( Math.random() * spheres.count );
+				// index = Math.floor( Math.random() * spheres.count );
 
-				position.set( 0, Math.random() + 1, 0 );
-				physics.setMeshPosition( spheres, position, index );
+				// position.set( 0, Math.random() + 1, 0 );
+				// physics.setMeshPosition( spheres, position, index );
 
 				renderer.render( scene, camera );
 

@@ -18347,6 +18347,7 @@ oimo.dynamics.callback.RayCastClosest = class oimo_dynamics_callback_RayCastClos
 if(!oimo.dynamics.common) oimo.dynamics.common = {};
 oimo.dynamics.common.DebugDraw = class oimo_dynamics_common_DebugDraw {
 	constructor() {
+		console.log( 'DebugDraw' );
 		this.p = new oimo.common.Pool();
 		this.wireframe = false;
 		this.drawShapes = true;

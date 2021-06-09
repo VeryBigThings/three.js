@@ -365,7 +365,8 @@
 		"physics_ammo_rope",
 		"physics_ammo_terrain",
 		"physics_ammo_volume",
-		"physics_oimo_instancing"
+		"physics_oimo_instancing",
+		"physics_oimo_joints"
 	],
 	"misc": [
 		"misc_animation_groups",

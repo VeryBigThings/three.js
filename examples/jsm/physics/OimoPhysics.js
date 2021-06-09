@@ -1,4 +1,22 @@
-import { Vec3, World, RigidBodyType, RigidBodyConfig, ShapeConfig, RigidBody, Shape, OBoxGeometry, OSphereGeometry, DebugDraw } from '../libs/OimoPhysics/index.js';
+import {
+	Vec3,
+	World,
+	RigidBodyType,
+	RigidBodyConfig,
+	ShapeConfig,
+	RigidBody,
+	Shape,
+	OBoxGeometry,
+	OSphereGeometry,
+	PrismaticJointConfig,
+	PrismaticJoint,
+	CylindricalJointConfig,
+	CylindricalJoint,
+	SphericalJoint,
+	SphericalJointConfig,
+	RagdollJoint, MathUtil, RagdollJointConfig, UniversalJointConfig, UniversalJoint, RevoluteJoint, RevoluteJointConfig
+} from '../libs/OimoPhysics';
+import { OimoPhysicsDebugger } from './OimoPhysicsDebugger.js';
 
 /**
  * OimoPhysics helper constructor
@@ -6,16 +24,19 @@ import { Vec3, World, RigidBodyType, RigidBodyConfig, ShapeConfig, RigidBody, Sh
  * @return {Promise<{addMesh: addMesh, setMeshPosition: setMeshPosition, debugDraw?: DebugDraw}>}
  * @constructor
  */
-async function OimoPhysics(enableDebug) {
+async function OimoPhysics( enableDebug ) {
 
 	const frameRate = 60;
 
 	const world = new World( 2, new Vec3( 0, - 9.8, 0 ) );
 	let oimoDebugger;
 
-	if(!!enableDebug) {
-		oimoDebugger = OimoPhysicsDebugger();
-		world.setDebugDraw(oimoDebugger.de);
+	if ( !! enableDebug ) {
+
+		oimoDebugger = await OimoPhysicsDebugger();
+		world.setDebugDraw( oimoDebugger.debugDraw );
+		console.log( 'oimoDebugger', oimoDebugger.debugDraw );
+
 	}
 
 	//
@@ -61,7 +82,7 @@ async function OimoPhysics(enableDebug) {
 
 			} else if ( mesh.isMesh ) {
 
-				handleMesh( mesh, mass, shape );
+				return handleMesh( mesh, mass, shape );
 
 			}
 
@@ -88,6 +109,8 @@ async function OimoPhysics(enableDebug) {
 			meshMap.set( mesh, body );
 
 		}
+
+		return body;
 
 	}
 
@@ -146,6 +169,125 @@ async function OimoPhysics(enableDebug) {
 
 	}
 
+	// Joints
+
+	function addPrismaticJoint( rb1, rb2, anchor, axis, sd = null, lm = null ) {
+
+		const jc = new PrismaticJointConfig();
+		jc.init( rb1, rb2, anchor, axis );
+		if ( sd != null ) jc.springDamper = sd;
+		if ( lm != null ) jc.limitMotor = lm;
+		const j = new PrismaticJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addCylindricalJoint( rb1, rb2, anchor, axis, rotSd = null, rotLm = null, traSd = null, traLm = null ) {
+
+		const jc = new CylindricalJointConfig();
+		jc.init( rb1, rb2, anchor, axis );
+		if ( rotSd != null ) jc.rotationalSpringDamper = rotSd;
+		if ( rotLm != null ) jc.rotationalLimitMotor = rotLm;
+		if ( traSd != null ) jc.translationalSpringDamper = traSd;
+		if ( traLm != null ) jc.translationalLimitMotor = traLm;
+		const j = new CylindricalJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addSphericalJoint( rb1, rb2, anchor ) {
+
+		const jc = new SphericalJointConfig();
+		jc.init( rb1, rb2, anchor );
+		const j = new SphericalJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addSphericalJoint2( rb1, rb2, localAnchor1, localAnchor2 ) {
+
+		const jc = new SphericalJointConfig();
+		jc.localAnchor1.copyFrom( localAnchor1 );
+		jc.localAnchor2.copyFrom( localAnchor2 );
+
+		jc.rigidBody1 = rb1;
+		jc.rigidBody2 = rb2;
+
+		const j = new SphericalJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addRagdollJoint( rb1, rb2, anchor, twistAxis, swingAxis, swingSd = null, maxSwing1Deg = 180, maxSwing2Deg = 180, twistSd = null, twistLm = null ) {
+
+		rb1.getRotation().transpose(); // ?
+		rb2.getRotation().transpose(); // ?
+		const jc = new RagdollJointConfig();
+		jc.init( rb1, rb2, anchor, twistAxis, swingAxis );
+		if ( twistSd != null ) jc.twistSpringDamper = twistSd;
+		if ( twistLm != null ) jc.twistLimitMotor = twistLm;
+		if ( swingSd != null ) jc.swingSpringDamper = swingSd;
+		jc.maxSwingAngle1 = maxSwing1Deg * MathUtil.TO_RADIANS;
+		jc.maxSwingAngle2 = maxSwing2Deg * MathUtil.TO_RADIANS;
+		const j = new RagdollJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addUniversalJoint( rb1, rb2, anchor, axis1, axis2, sd1 = null, lm1 = null, sd2 = null, lm2 = null ) {
+
+		rb1.getRotation().transpose(); // ?
+		rb2.getRotation().transpose(); // ?
+		const jc = new UniversalJointConfig();
+		jc.init( rb1, rb2, anchor, axis1, axis2 );
+		if ( sd1 != null ) jc.springDamper1 = sd1;
+		if ( lm1 != null ) jc.limitMotor1 = lm1;
+		if ( sd2 != null ) jc.springDamper2 = sd2;
+		if ( lm2 != null ) jc.limitMotor2 = lm2;
+		const j = new UniversalJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addRevoluteJoint( rb1, rb2, anchor, axis, sd = null, lm = null ) {
+
+		const jc = new RevoluteJointConfig();
+		jc.init( rb1, rb2, anchor, axis );
+		if ( sd != null ) jc.springDamper = sd;
+		if ( lm != null ) jc.limitMotor = lm;
+		const j = new RevoluteJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+	function addRevoluteJoint2( rb1, rb2, localAnchor1, localAnchor2, localAxis1, localAxis2, sd = null, lm = null ) {
+
+		const jc = new RevoluteJointConfig();
+		jc.rigidBody1 = rb1;
+		jc.rigidBody2 = rb2;
+
+		jc.localAnchor1.copyFrom( localAnchor1 );
+		jc.localAnchor2.copyFrom( localAnchor2 );
+
+		jc.localAxis1.copyFrom( localAxis1 );
+		jc.localAxis2.copyFrom( localAxis2 );
+
+		if ( sd != null ) jc.springDamper = sd;
+		if ( lm != null ) jc.limitMotor = lm;
+		const j = new RevoluteJoint( jc );
+		world.addJoint( j );
+		return j;
+
+	}
+
+
 	//
 
 	let lastTime = 0;
@@ -156,8 +298,12 @@ async function OimoPhysics(enableDebug) {
 
 		if ( lastTime > 0 ) {
 
+			oimoDebugger.generateGeometries();
+			oimoDebugger.clearBuffers();
+
 			// console.time( 'world.step' );
 			world.step( 1 / frameRate );
+			world.debugDraw();
 			// console.timeEnd( 'world.step' );
 
 		}
@@ -205,7 +351,16 @@ async function OimoPhysics(enableDebug) {
 	return {
 		addMesh: addMesh,
 		setMeshPosition: setMeshPosition,
-		debugDraw: debugDraw
+		debugDraw: oimoDebugger,
+		addPrismaticJoint: addPrismaticJoint,
+		addCylindricalJoint: addCylindricalJoint,
+		addSphericalJoint: addSphericalJoint,
+		addSphericalJoint2: addSphericalJoint2,
+		addRagdollJoint: addRagdollJoint,
+		addUniversalJoint: addUniversalJoint,
+		addRevoluteJoint: addRevoluteJoint,
+		addRevoluteJoint2: addRevoluteJoint2,
+		world: world,
 		// addCompoundMesh
 	};
 
@@ -240,7 +395,6 @@ function compose( position, quaternion, array, index ) {
 	array[ index + 15 ] = 1;
 
 }
-
 
 
 export { OimoPhysics };
