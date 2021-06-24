@@ -1,4 +1,4 @@
-import {oimo} from './OimoPhysics.js';
+import { oimo } from './OimoPhysics.js';
 
 // dynamics
 export const World = oimo.dynamics.World;

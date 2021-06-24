@@ -41,8 +41,8 @@ export class OimoMousePuller {
 			const intersected = this.updateMouseJoint(
 			    squeezed,
 			    position,
-			    new Vec3(ray.origin.x, ray.origin.y, ray.origin.z),
-			    new Vec3(ray.direction.x, ray.direction.y, ray.direction.z)
+			    new Vec3( ray.origin.x, ray.origin.y, ray.origin.z ),
+			    new Vec3( ray.direction.x, ray.direction.y, ray.direction.z )
 			);
 
 			if ( intersectedObject ) {
